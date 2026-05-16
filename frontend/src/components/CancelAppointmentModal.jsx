@@ -43,7 +43,7 @@ const CancelAppointmentModal = ({ open, patientId, onClose, onPrefill }) => {
 
     try {
       await axios.delete(`${import.meta.env.VITE_API_URL}/api/appointments/${apt.id}`);
-      const msg = `Cancelled appointment for patient ${patientId.trim()} with doctor ID ${apt.doctor_id} on ${apt.date} at ${apt.time}.`;
+      const msg = `Cancelled appointment for patient ${patientId.trim()} with ${apt.doctor_name} on ${apt.date_slot}.`;
       onPrefill?.(msg);
       console.log("✅ Appointment cancelled:", apt.id);
     } catch (err) {
@@ -131,9 +131,9 @@ const CancelAppointmentModal = ({ open, patientId, onClose, onPrefill }) => {
                       : "bg-transparent text-slate-200 hover:bg-slate-800/40"
                   }`}
                 >
-                  <div className="font-medium">Doctor ID {apt.doctor_id}</div>
+                  <div className="font-medium">{apt.doctor_name}</div>
                   <div className="text-xs text-slate-400 font-mono">
-                    {apt.date} at {apt.time}
+                    {apt.date_slot}
                   </div>
                 </button>
               ))}

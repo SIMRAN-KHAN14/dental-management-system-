@@ -9,8 +9,9 @@ def _load_df() -> pd.DataFrame:
     df["is_available"] = df["is_available"].astype(str).str.upper() == "TRUE"
     # Parse using your actual CSV format
     df["date_slot"] = pd.to_datetime(df["date_slot"], errors="coerce")
-    df["doctor_name"] = df["doctor_name"].str.lower().str.strip()
-    df["specialization"] = df["specialization"].str.lower().str.strip()
+    # Do not lowercase here to preserve case in CSV
+    # df["doctor_name"] = df["doctor_name"].str.lower().str.strip()
+    # df["specialization"] = df["specialization"].str.lower().str.strip()
     df["patient_to_attend"] = (
         df["patient_to_attend"]
         .astype(str)
@@ -52,7 +53,7 @@ def book_appointment(patient_id: str, doctor_name: str, date_slot: str) -> dict:
         return {"success": False, "message": f"Invalid date_slot format: {date_slot}"}
 
     doc = doctor_name.lower().strip()
-    mask = (df["doctor_name"] == doc) & (df["date_slot"] == target_dt)
+    mask = (df["doctor_name"].str.lower().str.strip() == doc) & (df["date_slot"] == target_dt)
     rows = df[mask]
 
     if rows.empty:
@@ -150,7 +151,7 @@ def reschedule_appointment(
             "message": f"No existing booking found for patient {pid} at {current_date_slot}.",
         }
 
-    new_mask = (df["doctor_name"] == doc) & (df["date_slot"] == new_dt)
+    new_mask = (df["doctor_name"].str.lower().str.strip() == doc) & (df["date_slot"] == new_dt)
     new_rows = df[new_mask]
     if new_rows.empty:
         return {"success": False, "message": f"Slot {new_date_slot} does not exist for {doctor_name}."}

@@ -58,8 +58,13 @@ const RescheduleAppointmentModal = ({ open, patientId, onClose, onPrefill }) => 
     const apt = appointments[Number(selectedIdx)];
     if (!patientId?.trim() || !apt || !doctorId || !date || !slot) return;
     try {
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/appointments/${apt.id}`, { new_date: date, new_time: slot });
-      onPrefill?.(`Rescheduled appointment for patient ${patientId.trim()} from doctor ${apt.doctor_id} on ${apt.date} ${apt.time} → doctor ${doctorId} on ${date} ${slot}.`);
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/appointments/${apt.id}`, { 
+        new_date: date, 
+        new_time: slot,
+        new_doctor_id: doctorId
+      });
+      const newDocName = doctors.find(d => String(d.doctor_id) === String(doctorId))?.doctor_name || doctorId;
+      onPrefill?.(`Rescheduled appointment for patient ${patientId.trim()} from ${apt.doctor_name} on ${apt.date_slot} → ${newDocName} on ${date} ${slot}.`);
     } catch { setError("Failed to reschedule."); return; }
     onClose?.();
   };
@@ -85,7 +90,7 @@ const RescheduleAppointmentModal = ({ open, patientId, onClose, onPrefill }) => 
               {appointments.map((apt, idx) => (
                 <button key={apt.id} onClick={() => setSelectedIdx(String(idx))}
                   className={`block w-full px-3 py-2 rounded ${selectedIdx==idx?"bg-primary/10 text-primary":"bg-slate-900 text-slate-200"}`}>
-                  Doctor {apt.doctor_id} — {apt.date} {apt.time}
+                  {apt.doctor_name} — {apt.date_slot}
                 </button>
               ))}
             </div>

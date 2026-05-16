@@ -123,6 +123,12 @@ class ChatRequest(BaseModel):
     message: str
     session_id: str
 
+class AppointmentCreate(BaseModel):
+    patient_id: str
+    doctor_id: int
+    date: str
+    time: str
+
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
@@ -174,6 +180,7 @@ def get_appointments(patient_id: str):
         for _, row in df_filtered.iterrows():
             date_slot = pd.to_datetime(row['date_slot']).strftime("%Y-%m-%d %H:%M")
             appointments.append({
+                "id": int(row['id']),
                 "date_slot": date_slot,
                 "doctor_name": row['doctor_name'],
                 "specialization": row['specialization']
@@ -186,7 +193,7 @@ def get_appointments(patient_id: str):
 def get_doctors():
     try:
         df = pd.read_csv(CSV_PATH)
-        doctors_df = df[['doctor_name', 'specialization']].drop_duplicates()
+        doctors_df = df[['doctor_id', 'doctor_name', 'specialization']].drop_duplicates()
         return doctors_df.to_dict(orient="records")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -204,7 +211,7 @@ def get_doctor_profiles():
         today_avail = df[(df['date_slot'].str.startswith(today_str)) & (df['is_available'].astype(str).str.upper() == 'TRUE')]
         available_doctors = set(today_avail['doctor_name'].unique())
 
-        csv_doctors = df[['doctor_name', 'specialization']].drop_duplicates().to_dict(orient="records")
+        csv_doctors = df[['doctor_id', 'doctor_name', 'specialization']].drop_duplicates().to_dict(orient="records")
         
         # Load JSON profiles
         profiles_path = os.path.join(os.path.dirname(__file__), "doctor_profiles.json")
@@ -245,6 +252,68 @@ def get_slots(doctor_name: str, date: str):
         return slots
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/availability")
+def get_availability(doctor_id: int, date: str):
+    try:
+        df = pd.read_csv(CSV_PATH)
+        mask = (df['doctor_id'] == doctor_id) & (df['date_slot'].str.startswith(date)) & (df['is_available'].astype(str).str.upper() == 'TRUE')
+        df_filtered = df[mask]
+        
+        slots = []
+        for _, row in df_filtered.iterrows():
+            dt = pd.to_datetime(row['date_slot'])
+            slots.append({
+                "date": dt.strftime("%Y-%m-%d"),
+                "time": dt.strftime("%H:%M")
+            })
+        return slots
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/appointments")
+def create_appointment(appt: AppointmentCreate):
+    try:
+        df = pd.read_csv(CSV_PATH)
+        # Match by doctor_id, date, and time
+        date_slot = f"{appt.date} {appt.time}"
+        mask = (df['doctor_id'] == appt.doctor_id) & (df['date_slot'] == date_slot)
+        
+        if not df[mask].any().any():
+            raise HTTPException(status_code=404, detail="Slot not found")
+            
+        if str(df.loc[mask, 'is_available'].iloc[0]).upper() == 'FALSE':
+            raise HTTPException(status_code=400, detail="Slot already booked")
+            
+        df.loc[mask, 'is_available'] = 'FALSE'
+        df.loc[mask, 'patient_to_attend'] = appt.patient_id
+        df.to_csv(CSV_PATH, index=False)
+        
+        return {"message": "Appointment booked successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/appointments/{appointment_id}")
+def delete_appointment(appointment_id: int):
+    try:
+        df = pd.read_csv(CSV_PATH)
+        mask = df['id'] == appointment_id
+        
+        if not df[mask].any().any():
+            raise HTTPException(status_code=404, detail="Appointment not found")
+            
+        df.loc[mask, 'is_available'] = 'TRUE'
+        df.loc[mask, 'patient_to_attend'] = ''
+        df.to_csv(CSV_PATH, index=False)
+        
+        return {"message": "Appointment cancelled successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/stats")
 def get_stats():
@@ -308,6 +377,54 @@ def get_analytics():
             "specializations": specializations,
             "peak_hours": peak_hours
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/appointments/{appointment_id}")
+def reschedule_appointment(appointment_id: int, new_data: dict):
+    try:
+        df = pd.read_csv(CSV_PATH)
+        # Find old appointment
+        old_mask = df['id'] == appointment_id
+        if not df[old_mask].any().any():
+            raise HTTPException(status_code=404, detail="Old appointment not found")
+            
+        patient_id = df.loc[old_mask, 'patient_to_attend'].iloc[0]
+        
+        # Find new slot
+        new_date = new_data.get("new_date")
+        new_time = new_data.get("new_time")
+        date_slot = f"{new_date} {new_time}"
+        
+        # We assume the same doctor for reschedule in this simple implementation, 
+        # but the frontend might allow changing doctors. Let's handle both.
+        new_mask = (df['date_slot'] == date_slot)
+        # If doctor_id is provided in new_data, use it
+        if "new_doctor_id" in new_data:
+            new_mask &= (df['doctor_id'] == int(new_data["new_doctor_id"]))
+        else:
+            # Otherwise use the same doctor as before
+            new_doctor_id = df.loc[old_mask, 'doctor_id'].iloc[0]
+            new_mask &= (df['doctor_id'] == new_doctor_id)
+
+        if not df[new_mask].any().any():
+            raise HTTPException(status_code=404, detail="New slot not found")
+            
+        if str(df.loc[new_mask, 'is_available'].iloc[0]).upper() == 'FALSE':
+            raise HTTPException(status_code=400, detail="New slot already booked")
+            
+        # Atomic update
+        df.loc[old_mask, 'is_available'] = 'TRUE'
+        df.loc[old_mask, 'patient_to_attend'] = ''
+        
+        df.loc[new_mask, 'is_available'] = 'FALSE'
+        df.loc[new_mask, 'patient_to_attend'] = patient_id
+        
+        df.to_csv(CSV_PATH, index=False)
+        
+        return {"message": "Appointment rescheduled successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
