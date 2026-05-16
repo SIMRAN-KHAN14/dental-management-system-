@@ -21,6 +21,8 @@ const ChatPage = () => {
     const storedPatientId = localStorage.getItem('patientId');
     if (storedPatientId) {
       setPatientId(storedPatientId);
+    } else {
+      setPatientId('PAT-8821');
     }
     
     // Check for prefilled message

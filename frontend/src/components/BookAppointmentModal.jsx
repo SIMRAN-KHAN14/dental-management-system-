@@ -65,24 +65,33 @@ const BookAppointmentModal = ({ open, patientId, onClose, onPrefill }) => {
   }, [open, canFetchSlots, doctorId, date]);
 
   const handleConfirm = async () => {
-    if (!patientId?.trim() || !doctorId || !date || !slot) return;
+    if (!patientId?.trim() || !doctorId || !date || !slot) {
+      setError("Please fill in all fields.");
+      return;
+    }
+    
+    setLoadingSlots(true); // Re-use loading state for the booking action
     try {
+      const selectedDoctor = doctors.find(d => String(d.doctor_id) === String(doctorId));
+      
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/appointments`, {
         patient_id: patientId.trim(),
-        doctor_id: doctorId,
+        doctor_id: parseInt(doctorId, 10),
         date,
         time: slot
       });
-      // Prefill message for confirmation or chat
-      const msg = `Booked appointment for patient ${patientId.trim()} with doctor ${doctorId} on ${date} ${slot}.`;
+      
+      // Prefill message with doctor name instead of ID
+      const msg = `Successfully booked appointment for patient ${patientId.trim()} with ${selectedDoctor?.doctor_name || 'Doctor'} on ${date} at ${slot}.`;
       onPrefill?.(msg);
       console.log("✅ Appointment booked:", res.data);
+      onClose?.();
     } catch (err) {
       console.error("❌ Failed to book appointment:", err);
-      setError("Failed to book appointment.");
-      return;
+      setError(err.response?.data?.detail || "Failed to book appointment.");
+    } finally {
+      setLoadingSlots(false);
     }
-    onClose?.();
   };
 
   return (
@@ -109,7 +118,6 @@ const BookAppointmentModal = ({ open, patientId, onClose, onPrefill }) => {
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={!patientId?.trim() || !doctorId || !date || !slot}
               className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Confirm Booking
@@ -118,6 +126,12 @@ const BookAppointmentModal = ({ open, patientId, onClose, onPrefill }) => {
         </div>
       }
     >
+      {error && (
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-lg mb-4 text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Doctor dropdown */}
       <div>
         <label className="block text-xs text-slate-400 mb-2 flex items-center gap-2">
