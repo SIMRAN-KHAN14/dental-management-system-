@@ -66,13 +66,13 @@ You have access to these functions:
 Always call the correct tool with the required arguments. Do not invent new tool names.
 """
 
-def state_modifier(state: dict) -> list:
+def _pre_model_hook(state: dict) -> dict:
     """
     Ensures the chat history is clean and contains the system prompt.
     """
     messages = state["messages"]
     sanitized = sanitize_messages(messages)
-    return [SystemMessage(content=SYSTEM_PROMPT)] + sanitized
+    return {"llm_input_messages": [SystemMessage(content=SYSTEM_PROMPT)] + sanitized}
 
 
 def _read_env_values():
@@ -118,6 +118,6 @@ def get_dental_graph():
     _dental_graph = create_react_agent(
         model=llm,
         tools=TOOLS,
-        state_modifier=state_modifier,
+        pre_model_hook=_pre_model_hook,
     )
     return _dental_graph
