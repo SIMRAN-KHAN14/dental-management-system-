@@ -34,7 +34,7 @@ def check_slot_availability(doctor_name: str, date_slot: str) -> dict:
     doc = doctor_name.lower().strip()
 
     try:
-        target_dt = pd.to_datetime(date_slot, format="%Y-%m-%d %H:%M:%S", errors="coerce")
+        target_dt = pd.to_datetime(date_slot, errors="coerce")
     except Exception:
         return {"success": False, "message": f"Invalid date format: {date_slot}"}
 

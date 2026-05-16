@@ -8,7 +8,7 @@ def _load_df() -> pd.DataFrame:
     df.columns = df.columns.str.strip()
     df["is_available"] = df["is_available"].astype(str).str.upper() == "TRUE"
     # Parse using your actual CSV format
-    df["date_slot"] = pd.to_datetime(df["date_slot"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+    df["date_slot"] = pd.to_datetime(df["date_slot"], errors="coerce")
     df["doctor_name"] = df["doctor_name"].str.lower().str.strip()
     df["specialization"] = df["specialization"].str.lower().str.strip()
     df["patient_to_attend"] = (
@@ -24,7 +24,7 @@ def _load_df() -> pd.DataFrame:
 def _save_df(df: pd.DataFrame) -> None:
     out = df.copy()
     # Save back in the same format as your CSV
-    out["date_slot"] = out["date_slot"].dt.strftime("%Y-%m-%d %H:%M:%S")
+    out["date_slot"] = out["date_slot"].dt.strftime("%Y-%m-%d %H:%M")
     out["is_available"] = out["is_available"].map({True: "TRUE", False: "FALSE"})
     out["patient_to_attend"] = (
         out["patient_to_attend"]
@@ -47,7 +47,7 @@ def book_appointment(patient_id: str, doctor_name: str, date_slot: str) -> dict:
     """
     df = _load_df()
     try:
-        target_dt = pd.to_datetime(date_slot, format="mixed", dayfirst=False)
+        target_dt = pd.to_datetime(date_slot, errors="coerce")
     except Exception:
         return {"success": False, "message": f"Invalid date_slot format: {date_slot}"}
 
@@ -83,7 +83,7 @@ def cancel_appointment(patient_id: str, date_slot: str) -> dict:
     """
     df = _load_df()
     try:
-        target_dt = pd.to_datetime(date_slot, format="mixed", dayfirst=False)
+        target_dt = pd.to_datetime(date_slot, errors="coerce")
     except Exception:
         return {"success": False, "message": f"Invalid date_slot format: {date_slot}"}
 
@@ -131,8 +131,8 @@ def reschedule_appointment(
     """
     df = _load_df()
     try:
-        current_dt = pd.to_datetime(current_date_slot, format="mixed", dayfirst=False)
-        new_dt = pd.to_datetime(new_date_slot, format="mixed", dayfirst=False)
+        current_dt = pd.to_datetime(current_date_slot, errors="coerce")
+        new_dt = pd.to_datetime(new_date_slot, errors="coerce")
     except Exception as exc:
         return {"success": False, "message": f"Date parse error: {exc}"}
 

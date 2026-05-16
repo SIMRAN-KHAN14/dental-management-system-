@@ -4,5 +4,11 @@
         "email": "[EMAIL_ADDRESS]",
         "password": "$2b$12$39QPVTKAENZSZmjjxsFo0.srKmgROKkAgwUPMZ4PKZ//WaW.mulyu",
         "patient_id": "PAT-1000"
+    },
+    "simran12@gmail.com": {
+        "name": "simran khan ",
+        "email": "simran12@gmail.com",
+        "password": "$2b$12$9kcFaZl20d6RFYxxbYAMhuqBMcMV35OBefyeh9u3lRfqWCulQ3n1S",
+        "patient_id": "PAT-1001"
     }
 }

@@ -1,1 +1,8 @@
-doctor_id,doctor_name,specialization1,Dr. Sharma,Dentist2,Dr. Mehta,Orthodontist3,Dr. Kapoor,Oral Surgeon
+doctor_id,doctor_name,specialization
+1,Dr. Sharma,Orthodontist
+2,Dr. Mehta,Dentist
+3,Dr. Kapoor,Endodontist
+4,Dr. Singh,Periodontist
+5,Dr. Sarwar,Prosthodontist
+6,Dr. Verma,Oral Surgeon
+7,Dr. Gupta,Pediatric Dentist
