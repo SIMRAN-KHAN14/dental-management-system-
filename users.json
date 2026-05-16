@@ -1,0 +1,8 @@
+{
+    "[EMAIL_ADDRESS]": {
+        "name": "test",
+        "email": "[EMAIL_ADDRESS]",
+        "password": "$2b$12$39QPVTKAENZSZmjjxsFo0.srKmgROKkAgwUPMZ4PKZ//WaW.mulyu",
+        "patient_id": "PAT-1000"
+    }
+}

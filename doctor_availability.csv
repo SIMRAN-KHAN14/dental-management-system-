@@ -1,0 +1,9 @@
+date_slot,specialization,doctor_name,is_available,patient_to_attend
+2026-05-16 09:00,Orthodontist,Dr. Sharma,TRUE,
+2026-05-16 10:00,Orthodontist,Dr. Sharma,FALSE,PAT-1001
+2026-05-16 11:00,Dentist,Dr. Mehta,TRUE,
+2026-05-16 14:00,Endodontist,Dr. Kapoor,FALSE,PAT-1002
+2026-05-17 09:00,Periodontist,Dr. Singh,TRUE,
+2026-05-17 10:00,Prosthodontist,Dr. Sarwar,TRUE,
+2026-05-17 11:00,Oral Surgeon,Dr. Verma,FALSE,PAT-1003
+2026-05-17 14:00,Pediatric Dentist,Dr. Gupta,TRUE,

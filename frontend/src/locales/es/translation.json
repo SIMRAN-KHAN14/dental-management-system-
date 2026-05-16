@@ -1,0 +1,9 @@
+{
+  "dashboard": "Panel",
+  "chat_assistant": "Asistente de Chat",
+  "appointments": "Citas",
+  "doctors": "Doctores",
+  "analytics": "Analítica",
+  "powered_by": "Desarrollado por LangGraph",
+  "log_out": "Cerrar sesión"
+}

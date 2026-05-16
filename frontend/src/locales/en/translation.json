@@ -1,0 +1,9 @@
+{
+  "dashboard": "Dashboard",
+  "chat_assistant": "Chat Assistant",
+  "appointments": "Appointments",
+  "doctors": "Doctors",
+  "analytics": "Analytics",
+  "powered_by": "Powered by LangGraph",
+  "log_out": "Log Out"
+}

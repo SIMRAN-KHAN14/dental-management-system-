@@ -1,0 +1,47 @@
+[
+  {
+    "doctor_name": "Dr. Sarah Jenkins",
+    "experience_years": 12,
+    "rating": 4.8,
+    "review_count": 145,
+    "bio": "Experienced general dentist committed to providing comprehensive and compassionate care to patients of all ages.",
+    "languages": ["English", "Spanish"],
+    "photo_url": "https://i.pravatar.cc/150?u=sarah"
+  },
+  {
+    "doctor_name": "Dr. Michael Chen",
+    "experience_years": 8,
+    "rating": 4.9,
+    "review_count": 89,
+    "bio": "Specialized in orthodontics, Dr. Chen helps patients achieve their perfect smile using the latest techniques.",
+    "languages": ["English", "Mandarin"],
+    "photo_url": "https://i.pravatar.cc/150?u=michael"
+  },
+  {
+    "doctor_name": "Dr. Emily Rodriguez",
+    "experience_years": 15,
+    "rating": 4.7,
+    "review_count": 210,
+    "bio": "Expert periodontist focused on the prevention, diagnosis, and treatment of periodontal disease.",
+    "languages": ["English", "Spanish", "French"],
+    "photo_url": "https://i.pravatar.cc/150?u=emily"
+  },
+  {
+    "doctor_name": "Dr. James Wilson",
+    "experience_years": 20,
+    "rating": 5.0,
+    "review_count": 320,
+    "bio": "Renowned oral surgeon with extensive experience in complex dental extractions and implant placements.",
+    "languages": ["English"],
+    "photo_url": "https://i.pravatar.cc/150?u=james"
+  },
+  {
+    "doctor_name": "Dr. Lisa Patel",
+    "experience_years": 5,
+    "rating": 4.6,
+    "review_count": 54,
+    "bio": "Dedicated pediatric dentist who creates a fun, stress-free environment for children's dental care.",
+    "languages": ["English", "Hindi", "Gujarati"],
+    "photo_url": "https://i.pravatar.cc/150?u=lisa"
+  }
+]
