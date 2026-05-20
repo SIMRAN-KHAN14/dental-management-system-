@@ -33,7 +33,7 @@ Your ONLY job is to book NEW appointments for patients.
 - Ask for ONE missing piece of information at a time.
 
 ## Date Format
-M/D/YYYY H:MM (e.g., 5/10/2026 9:00)
+Accept M/D/YYYY H:MM (e.g., 5/10/2026 9:00) or YYYY-MM-DD H:MM (e.g., 2026-05-20 09:00) — match CSV values from tools.
 """
 
 BOOKING_PROMPT = ChatPromptTemplate.from_messages([
@@ -41,7 +41,7 @@ BOOKING_PROMPT = ChatPromptTemplate.from_messages([
     ("placeholder", "{messages}"),
 ])
 
-booking_tool_node = ToolNode(tools=BOOKING_TOOLS)
+booking_tool_node = ToolNode(tools=BOOKING_TOOLS, handle_tool_errors=True)
 
 
 def booking_agent_node(state: AppointmentState) -> dict:

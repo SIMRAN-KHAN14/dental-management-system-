@@ -3,7 +3,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage, AIMessageChunk
+from dental_agent.utils import repair_chat_history
 from typing import Optional
 import pandas as pd
 import json
@@ -17,9 +18,17 @@ from reminders import check_reminders
 env_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path=env_path)
 
-# Initialize the LangGraph agent
 from dental_agent.agent import get_dental_graph
-dental_graph = get_dental_graph()
+
+_dental_graph = None
+
+
+def _get_dental_graph():
+    global _dental_graph
+    if _dental_graph is None:
+        _dental_graph = get_dental_graph()
+    return _dental_graph
+
 
 app = FastAPI()
 
@@ -136,32 +145,48 @@ async def chat_endpoint(request: ChatRequest):
         if session_id not in sessions:
             sessions[session_id] = []
         
-        history = sessions[session_id]
+        history = repair_chat_history(sessions[session_id])
         history.append(HumanMessage(content=request.message))
         
         response_text = ""
+        final_state = None
         
-        # Stream from LangGraph
-        for event in dental_graph.stream(
+        # Stream from LangGraph supervisor workflow
+        for event in _get_dental_graph().stream(
             {"messages": history},
             stream_mode=["messages", "values"],
-            config={"recursion_limit": 20}
+            config={"recursion_limit": 25},
         ):
             event_type = event[0]
             event_data = event[1]
             
             if event_type == "messages":
-                chunk = event_data[0]
-                if getattr(chunk, "type", "") == "ai" and hasattr(chunk, "content") and chunk.content and not getattr(chunk, "tool_calls", None):
-                    response_text += chunk.content
+                chunk, meta = event_data[0], (event_data[1] if len(event_data) > 1 else {})
+                node = (meta or {}).get("langgraph_node", "")
+                if node == "supervisor":
+                    continue
+                is_ai = isinstance(chunk, (AIMessage, AIMessageChunk)) or getattr(chunk, "type", "") == "ai"
+                if is_ai and getattr(chunk, "content", None) and not getattr(chunk, "tool_calls", None):
+                    if isinstance(chunk.content, str):
+                        response_text += chunk.content
                     
             elif event_type == "values":
-                sessions[session_id] = event_data["messages"]
+                final_state = event_data
+                sessions[session_id] = repair_chat_history(event_data.get("messages", []))
+
+        if not response_text.strip() and final_state:
+            if final_state.get("final_response"):
+                response_text = final_state["final_response"]
+            else:
+                for msg in reversed(final_state.get("messages", [])):
+                    if isinstance(msg, AIMessage) and msg.content and not msg.tool_calls:
+                        response_text = msg.content if isinstance(msg.content, str) else str(msg.content)
+                        break
         
-        return {"response": response_text, "session_id": session_id}
+        return {"response": response_text or "I processed your request. How else can I help?", "session_id": session_id}
     except Exception as e:
         if request.session_id in sessions and sessions[request.session_id]:
-            sessions[request.session_id].pop()
+            sessions[request.session_id] = repair_chat_history(sessions[request.session_id])
         
         err_str = str(e)
         if "failed_generation" in err_str:

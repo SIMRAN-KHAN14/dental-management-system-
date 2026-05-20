@@ -1,6 +1,7 @@
 import pandas as pd
 from langchain_core.tools import tool
 from dental_agent.config.settings import CSV_PATH
+from dental_agent.tools.date_utils import parse_date_slot
 import os
 
 def _load_df() -> pd.DataFrame:
@@ -47,9 +48,8 @@ def book_appointment(patient_id: str, doctor_name: str, date_slot: str) -> dict:
         Dict with keys: success (bool), message (str).
     """
     df = _load_df()
-    try:
-        target_dt = pd.to_datetime(date_slot, errors="coerce")
-    except Exception:
+    target_dt = parse_date_slot(date_slot)
+    if target_dt is None:
         return {"success": False, "message": f"Invalid date_slot format: {date_slot}"}
 
     doc = doctor_name.lower().strip()
@@ -83,9 +83,8 @@ def cancel_appointment(patient_id: str, date_slot: str) -> dict:
         Dict with keys: success (bool), message (str).
     """
     df = _load_df()
-    try:
-        target_dt = pd.to_datetime(date_slot, errors="coerce")
-    except Exception:
+    target_dt = parse_date_slot(date_slot)
+    if target_dt is None:
         return {"success": False, "message": f"Invalid date_slot format: {date_slot}"}
 
     pid = str(patient_id).strip()
@@ -131,11 +130,10 @@ def reschedule_appointment(
         Dict with keys: success (bool), message (str).
     """
     df = _load_df()
-    try:
-        current_dt = pd.to_datetime(current_date_slot, errors="coerce")
-        new_dt = pd.to_datetime(new_date_slot, errors="coerce")
-    except Exception as exc:
-        return {"success": False, "message": f"Date parse error: {exc}"}
+    current_dt = parse_date_slot(current_date_slot)
+    new_dt = parse_date_slot(new_date_slot)
+    if current_dt is None or new_dt is None:
+        return {"success": False, "message": "Invalid current_date_slot or new_date_slot format."}
 
     doc = doctor_name.lower().strip()
     pid = str(patient_id).strip()

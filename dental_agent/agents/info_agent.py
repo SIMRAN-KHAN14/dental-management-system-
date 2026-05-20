@@ -1,5 +1,4 @@
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import AIMessage
 from langgraph.prebuilt import ToolNode
 from dental_agent.models.state import AppointmentState
 from dental_agent.llm import get_llm
@@ -36,7 +35,8 @@ Your role is to answer queries about doctor availability, schedules, and appoint
 5. After answering, ask if the user needs anything else.
 
 ## Date Format
-All dates follow M/D/YYYY H:MM format (e.g., 5/10/2026 9:00).
+- date_filter: use YYYY-MM-DD (e.g., 2026-06-25)
+- date_slot / appointments: M/D/YYYY H:MM or YYYY-MM-DD H:MM (use values returned by tools)
 """
 
 INFO_PROMPT = ChatPromptTemplate.from_messages([
@@ -44,7 +44,7 @@ INFO_PROMPT = ChatPromptTemplate.from_messages([
     ("placeholder", "{messages}"),
 ])
 
-info_tool_node = ToolNode(tools=INFO_TOOLS)
+info_tool_node = ToolNode(tools=INFO_TOOLS, handle_tool_errors=True)
 
 
 def info_agent_node(state: AppointmentState) -> dict:

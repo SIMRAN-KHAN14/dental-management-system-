@@ -1,4 +1,9 @@
+import json
+import re
+
 from pydantic import BaseModel, Field
+from langchain_core.prompts import ChatPromptTemplate
+
 from dental_agent.models.state import AppointmentState, RouteTarget
 from dental_agent.utils import sanitize_messages
 from dental_agent.llm import get_llm
@@ -18,6 +23,18 @@ class SupervisorDecision(BaseModel):
     reasoning: str = Field(description="Brief explanation of the routing decision.")
 
 
+INTENT_TO_AGENT: dict[str, RouteTarget] = {
+    "get_info": "info_agent",
+    "book": "booking_agent",
+    "cancel": "cancellation_agent",
+    "reschedule": "rescheduling_agent",
+    "unknown": "info_agent",
+    "end": "end",
+}
+
+VALID_AGENTS = set(INTENT_TO_AGENT.values())
+
+
 SUPERVISOR_SYSTEM = """You are the supervisor and router for a dental appointment management system.
 
 Your ONLY job is to analyze the user's latest message and classify their intent, then route to the correct specialist agent.
@@ -35,21 +52,57 @@ Your ONLY job is to analyze the user's latest message and classify their intent,
 - If the user's message contains multiple intents, pick the PRIMARY action.
 - If the last AI message already answered the user's question and the user has no follow-up, route to end.
 
-Output ONLY valid JSON matching the SupervisorDecision schema.
+Respond with ONLY a JSON object (no markdown fences), for example:
+{{"intent": "get_info", "next_agent": "info_agent", "reasoning": "User asked for available slots"}}
 """
 
-from langchain_core.prompts import ChatPromptTemplate
 SUPERVISOR_PROMPT = ChatPromptTemplate.from_messages([
     ("system", SUPERVISOR_SYSTEM),
     ("placeholder", "{messages}"),
 ])
 
 
-def supervisor_node(state: AppointmentState) -> dict:
-    llm = get_llm().with_structured_output(SupervisorDecision)
+def _parse_decision(raw: str) -> SupervisorDecision:
+    text = (raw or "").strip()
+    if not text:
+        return SupervisorDecision(
+            intent="unknown", next_agent="info_agent", reasoning="empty supervisor response"
+        )
+    try:
+        return SupervisorDecision.model_validate_json(text)
+    except Exception:
+        pass
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        try:
+            return SupervisorDecision.model_validate(json.loads(match.group()))
+        except Exception:
+            pass
+    return SupervisorDecision(
+        intent="unknown", next_agent="info_agent", reasoning="could not parse supervisor JSON"
+    )
 
+
+def _normalize_decision(decision: SupervisorDecision) -> SupervisorDecision:
+    intent = (decision.intent or "unknown").strip().lower()
+    if intent not in INTENT_TO_AGENT:
+        intent = "unknown"
+    next_agent = decision.next_agent
+    if next_agent not in VALID_AGENTS:
+        next_agent = INTENT_TO_AGENT[intent]
+    return SupervisorDecision(
+        intent=intent,
+        next_agent=next_agent,
+        reasoning=decision.reasoning or "",
+    )
+
+
+def supervisor_node(state: AppointmentState) -> dict:
+    llm = get_llm()
     chain = SUPERVISOR_PROMPT | llm
-    decision: SupervisorDecision = chain.invoke({"messages": sanitize_messages(state["messages"])})
+    response = chain.invoke({"messages": sanitize_messages(state["messages"])})
+    content = response.content if isinstance(response.content, str) else str(response.content)
+    decision = _normalize_decision(_parse_decision(content))
 
     return {
         "intent": decision.intent,

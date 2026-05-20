@@ -13,7 +13,21 @@ def route_from_supervisor(state: AppointmentState) -> str:
     """Read next_agent from state and return the corresponding node name."""
     target = state.get("next_agent", "info_agent")
     valid = {"info_agent", "booking_agent", "cancellation_agent", "rescheduling_agent", "end"}
-    return target if target in valid else "info_agent"
+    if target not in valid:
+        return "info_agent"
+    # If the last message is an unresolved tool-call turn, route back to the same agent.
+    messages = state.get("messages", [])
+    if messages and isinstance(messages[-1], AIMessage) and messages[-1].tool_calls:
+        intent = state.get("intent")
+        intent_to_agent = {
+            "book": "booking_agent",
+            "cancel": "cancellation_agent",
+            "reschedule": "rescheduling_agent",
+            "get_info": "info_agent",
+            "unknown": "info_agent",
+        }
+        return intent_to_agent.get(intent, "info_agent")
+    return target
 
 
 def _should_continue(state: AppointmentState) -> str:
@@ -57,36 +71,36 @@ def build_graph():
         },
     )
 
-    # Info agent loop: agent → tools → END
+    # Info agent loop: agent → tools → agent → END
     graph.add_conditional_edges(
         "info_agent",
         _should_continue,
         {"tools": "info_tools", "end": END},
     )
-    graph.add_edge("info_tools", END)
+    graph.add_edge("info_tools", "info_agent")
 
-    # Booking agent loop: agent → tools → END
+    # Booking agent loop: agent → tools → agent → END
     graph.add_conditional_edges(
         "booking_agent",
         _should_continue,
         {"tools": "booking_tools", "end": END},
     )
-    graph.add_edge("booking_tools", END)
+    graph.add_edge("booking_tools", "booking_agent")
 
-    # Cancellation agent loop: agent → tools → END
+    # Cancellation agent loop: agent → tools → agent → END
     graph.add_conditional_edges(
         "cancellation_agent",
         _should_continue,
         {"tools": "cancellation_tools", "end": END},
     )
-    graph.add_edge("cancellation_tools", END)
+    graph.add_edge("cancellation_tools", "cancellation_agent")
 
-    # Rescheduling agent loop: agent → tools → END
+    # Rescheduling agent loop: agent → tools → agent → END
     graph.add_conditional_edges(
         "rescheduling_agent",
         _should_continue,
         {"tools": "rescheduling_tools", "end": END},
     )
-    graph.add_edge("rescheduling_tools", END)
+    graph.add_edge("rescheduling_tools", "rescheduling_agent")
 
     return graph.compile()
