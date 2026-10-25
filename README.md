@@ -254,3 +254,5 @@ Tools provide an abstraction layer over the CSV data, making it easy to:
 | MODEL_NAME | LLM model to use | llama-3.3-70b-versatile |
 | TEMPERATURE | LLM creativity level | 0 (deterministic) |
 
+#   d e n t a l - m a n a g e m e n t - s y s t e m -  
+ 
